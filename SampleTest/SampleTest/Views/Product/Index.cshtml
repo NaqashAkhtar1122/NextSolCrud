@@ -1,0 +1,247 @@
+﻿@model List<SampleTest.Database.Product>
+
+@{
+	ViewBag.Title = "Index";
+}
+
+<div class="container">
+	<br />
+	<br />
+	<div class="row" style="float:right">
+		<input type="button" class="btn btn-success" onclick="addProduct()" value="+ Add New" />
+	</div>
+	<br />
+	<br />
+	<div class="row">
+		<table class="table table-bordered table-responsive table-striped">
+			<thead>
+				<tr>
+					<th>
+						Title
+					</th>
+					<th>
+						Cat ID
+					</th>
+					<th>
+						Sub Cat ID
+					</th>
+					<th>
+						Action
+					</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var item in Model)
+				{
+					<tr>
+						<td>
+							@item.Title
+						</td>
+						<td>
+							@item.CatID
+						</td>
+						<td>
+							@item.SubCatID
+						</td>
+						<td>
+							<input type="button" class="btn btn-primary" value="Edit" data-toggle="modal" data-target="#myModal" onclick="editProduct(@item.ID, '@item.Title', '@item.CatID', '@item.SubCatID')" />
+							<input type="button" class="btn btn-danger" value="Delete" data-toggle="modal" data-target="#confirmDepartmentDelete" onclick="deleteProduct(@item.ID)" />
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+</div>
+
+<div id="myModal" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title modelTitle">Add Product</h4>
+				<button type="button" class="close" data-dismiss="modal" onclick="closeModel()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="row">
+					<input type="number" class="hidden" style="display:none" id="productId" />
+					<div class="col-md-12">
+						<label>Title<span style="color:red">*</span></label>
+						<input type="text" id="Title" class="form-control" />
+					</div>
+					<div class="col-md-12">
+						<label>Category</label>
+						<select class="form-control" id="Category">
+							<option value="">Select Category</option>
+							@foreach (var item in ViewBag.Category)
+							{
+								<option value="@item.ID">@item.Title</option>
+							}
+						</select>
+					</div>
+					<div class="col-md-12">
+						<label>Sub Category</label>
+						<select class="form-control" id="SubCategory">
+							<option value="">Select Sub Category</option>
+							@*@foreach (var item in ViewBag.SubCategory)
+							{
+								<option value="@item.ID">@item.Title</option>
+							}*@
+						</select>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger" data-dismiss="modal" onclick="closeModel()">Close</button>
+				<button type="button" class="btn btn-primary SaveProduct" onclick="addUpdate()">Save</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div id="confirmProductDelete" class="modal fade" role="dialog">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title">Delete Product</h4>
+				<button type="button" class="close" data-dismiss="modal" onclick="closeDelModel()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="row">
+					<div class="danger" style="font-weight:bold; text-align:center">
+						Are You Sure!
+						<br />
+						You want to delete this item!
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger" data-dismiss="modal" onclick="closeDelModel()">NO</button>
+				<button type="button" class="btn btn-primary" onclick="confirmDelete()">YES</button>
+			</div>
+		</div>
+
+	</div>
+</div>
+
+
+@section scripts {
+	<script>
+		var productDeletedId = 0;
+		var productId = 0;
+
+		function addProduct() {
+			$("#modelTitle").text("Add Product");
+			$(".SaveProduct").text("Save");
+			$("#productId").val(0);
+			$("#Title").val("");
+			$("#Category").val("");
+			$("#SubCategory").val("");
+			$('#myModal').modal('toggle');
+		}
+
+		function editProduct(id, fTitle, catId, subCatId) {
+			GetSubCatByID(catId);
+			setTimeout(() => {
+				$(".modelTitle").text("Update Product");
+				$(".SaveProduct").text("Update");
+				$("#productId").val(id);
+				$("#Title").val(fTitle);
+				$("#Category").val(catId);
+				$("#SubCategory").val(subCatId);
+				$('#myModal').modal('toggle');
+			}, 200);
+		}
+
+		$(function () {
+			$("#Category").change(function () {
+				var catId = Number(this.value);
+				GetSubCatByID(catId);
+			});
+		});
+
+		function GetSubCatByID(catId) {
+			$.get("/Product/GetSubCats?Id=" + catId, function (data) {
+				$('#SubCategory').html("");
+				$('#SubCategory').append(
+					$('<option></option>').val("").html("Select Sub Category")
+				);
+				if (data.length > 0) {
+					$.each(data, function (val, text) {
+						$('#SubCategory').append(
+							$('<option></option>').val(Number(text.Value)).html(text.Text)
+						);
+					});
+				}
+				else {
+					alert("There is no data available against this category!");
+				}
+			});
+		}
+
+		function closeModel() {
+			$('#myModal').modal('hide');
+		}
+
+		function closeDelModel() {
+			$('#confirmProductDelete').modal('hide');
+		}
+
+		function addUpdate() {
+			if ($("#productId").val() == "") {
+				productId = 0;
+			}
+			else {
+				productId = parseInt($("#productId").val());
+			}
+
+			var model = {
+				Title: $("#Title").val(),
+				CatID: $("#Category").val(),
+				SubCatID: $("#SubCategory").val(),
+				ID: productId
+			};
+
+			if (model.Title == "" || model.CatID == "" || model.SubCatID == "" || model.CatID == undefined || model.SubCatID == undefined) {
+				alert("Please enter required fields!");
+				return;
+			}
+
+			$.ajax({
+				url: "/Product/AddUpdate",
+				data: model,
+				type: "POST",
+				success: function (response) {
+					if (response) {
+						alert("Saved Successfully!");
+						location.reload();
+					} else {
+						alert("Error!");
+					}
+				}
+			});
+		}
+
+		function deleteProduct(Id) {
+			productDeletedId = Id;
+			$('#confirmProductDelete').modal('toggle');
+		}
+
+		function confirmDelete() {
+			$.ajax({
+				url: "/Product/Delete",
+				data: { "Id": productDeletedId },
+				type: "POST",
+				success: function (res) {
+					if (res) {
+						alert("Product Deleted Successfully!");
+						location.reload();
+						$("#confirmProductDelete").modal('hide');
+					} else {
+						alert("There is some error please refresh the page.");
+					}
+				}
+			});
+		}
+	</script>
+}
+
